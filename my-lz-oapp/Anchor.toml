@@ -1,0 +1,19 @@
+[toolchain]
+anchor_version = "0.29.0"
+
+[features]
+seeds = false
+skip-lint = false
+
+[programs.localnet]
+oft = "5b2XuM8TG3ee5Dm6q7gJt26oS2GTnAWFPdw7YypQrWdH"
+
+[registry]
+url = "https://api.apr.dev"
+
+[provider]
+cluster = "Localnet"
+wallet = "./junk-id.json"
+
+[scripts]
+test = "npx jest test/anchor"
