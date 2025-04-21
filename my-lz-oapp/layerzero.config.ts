@@ -51,7 +51,12 @@ export default async function () {
     ])
 
     return {
-        contracts: [{ contract: sepoliaContract }, { contract: solanaContract }],
+        contracts: [
+            { contract: sepoliaContract },
+            {
+                contract: solanaContract,
+                config: { delegate: 'HhQ5WqHGkaQa2BCBfNVKg9232Vsn4Mep3TKRkykASw44' }
+            }],
         connections,
     }
 }
