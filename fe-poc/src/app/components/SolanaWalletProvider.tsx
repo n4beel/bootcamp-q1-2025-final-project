@@ -13,7 +13,7 @@ import { clusterApiUrl } from "@solana/web3.js";
 // require("@solana/wallet-adapter-react-ui/styles.css");
 
 
-export default function AppWalletProvider({
+export default function SolanaWalletProvider({
     children,
 }: {
     children: React.ReactNode;
