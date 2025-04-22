@@ -4,12 +4,12 @@ import { EndpointId } from '@layerzerolabs/lz-definitions';
 
 // EVM (Sepolia) Configuration
 export const EVM_CHAIN_ID = 11155111; // Sepolia Chain ID
-export const EVM_ENDPOINT_ID = EndpointId.SEPOLIA_V2_TESTNET; // LayerZero Endpoint ID for Sepolia
+export const EVM_ENDPOINT_ID = EndpointId.SEPOLIA_V2_TESTNET; // LayerZero Endpoint ID for Sepolia // 40161
 export const EVM_OFT_CONTRACT_ADDRESS = '0xF939B50a5C6F9C2E7CD0F60987eaE961456fC80D'; // Your MOFT OFT Contract address on Sepolia
 export const MOFT_TOKEN_DECIMALS_EVM = 18; // Decimals of your MOFT token on EVM
 
 // Solana (Devnet) Configuration
-export const SOLANA_ENDPOINT_ID = EndpointId.SOLANA_V2_TESTNET; // LayerZero Endpoint ID for Solana Devnet
+export const SOLANA_ENDPOINT_ID = EndpointId.SOLANA_V2_TESTNET; // LayerZero Endpoint ID for Solana Devnet // 40168
 export const SOLANA_OFT_PROGRAM_ID = '5b2XuM8TG3ee5Dm6q7gJt26oS2GTnAWFPdw7YypQrWdH'; // Public Key of your MOFT OFT Program on Solana Devnet
 export const SOLANA_MOFT_MINT_ADDRESS = '8QH6g9WbWPEPSxhy4zZapzcYs8nvUFv1L4Kg4Q2pcbhd'; // Public Key of the MOFT SPL Token Mint on Solana Devnet
 export const SOLANA_OFT_ESCROW_ADDRESS = 'DHnhfkHf6XeDq4XFkpRZN9erBZnd9TTyw5mkNPd8fF14'; // Public Key of the OFT Escrow account on Solana Devnet

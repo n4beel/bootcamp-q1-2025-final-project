@@ -1,6 +1,5 @@
 "use client";
 
-import styles from "./page.module.css";
 import dynamic from "next/dynamic";
 import Loading from "./components/Loading";
 
@@ -21,7 +20,7 @@ const BridgeForm = dynamic(() => import("./components/BridgeForm"), {
 
 export default function Home() {
   return (
-    <div className={styles.page}>
+    <div>
       <main className="flex items-center justify-center min-h-screen">
         <div className="border hover:border-slate-900 rounded">
           {/* Solana Section */}
