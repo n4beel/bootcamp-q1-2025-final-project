@@ -12,6 +12,18 @@ import { walletAdapterIdentity } from '@metaplex-foundation/umi-signer-wallet-ad
 import { mplToolbox } from '@metaplex-foundation/mpl-toolbox';
 import { publicKey as umiPublicKey, transactionBuilder } from '@metaplex-foundation/umi';
 import { TOKEN_PROGRAM_ID, getAssociatedTokenAddressSync } from '@solana/spl-token'; // Use sync version for simplicity here
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui/select'
+import { Textarea } from '@/components/ui/textarea'
 
 import {
     EVM_CHAIN_ID,
@@ -50,7 +62,6 @@ const BridgeForm: React.FC = () => {
     // Hook for approving token spending
     const { writeContractAsync: approveAsync, data: approveTxHash, isPending: isApprovePending, error: approveError } = useWriteContract();
 
-
     // === Solana Hooks ===
     const solanaWallet = useSolanaWallet();
     const { connection: solanaConnection } = useSolanaConnection();
@@ -68,7 +79,6 @@ const BridgeForm: React.FC = () => {
         }
         return umiInstance;
     }, [solanaConnection, solanaWallet]);
-
 
     // Derived State
     const isCorrectEvmChain = evmConnected && evmChainId === EVM_CHAIN_ID;
@@ -92,6 +102,7 @@ const BridgeForm: React.FC = () => {
         setQuotedFee(null);
         setBridgeTxHash('');
         setLzScanLink('');
+        
         if (!sourceChain || !amount || !recipientAddress) {
             setFeedback('Error: Please fill in all fields.');
             return;
@@ -113,11 +124,12 @@ const BridgeForm: React.FC = () => {
                     setIsQuotingFee(false);
                     return;
                 }
+                
                 const amountWei = parseUnits(amount, MOFT_TOKEN_DECIMALS_EVM);
                 let toBytes32: Hex;
+                
                 try {
                     // Assuming recipient is a Solana address (bs58 encoded)
-                    // Inside handleQuoteFee (EVM part)
                     const decodedAddress = bs58.decode(recipientAddress);
                     const hexAddress = bytesToHex(decodedAddress); // Convert Uint8Array to Hex
                     toBytes32 = pad(hexAddress, { size: 32 }); // Now pad the Hex string
@@ -138,13 +150,7 @@ const BridgeForm: React.FC = () => {
                 };
 
                 // Use wagmi's useReadContract
-                // Note: `useReadContract` is a hook, call it at the top level or use `readContract` from wagmi/actions
-                // For simplicity in a handler, we might use wagmi/actions `readContract` if available,
-                // or structure this differently using useEffect with dependencies.
-                // Let's simulate using readContract directly (you'd import it from wagmi/actions or core)
-                // This requires wagmi config setup outside the component.
-                // Alternative: Use useSimulateContract which gives fee estimate AND checks execution
-                const { data: quoteResult } = await simulateEVMQuoteSend(sendParam); // See helper function below
+                const { data: quoteResult } = await simulateEVMQuoteSend(sendParam);
 
                 if (!quoteResult) {
                     throw new Error("Could not simulate quoteSend");
@@ -153,18 +159,18 @@ const BridgeForm: React.FC = () => {
                 const fee = quoteResult as MessagingFee; // Adjust based on actual return type
                 setQuotedFee(fee);
                 setFeedback(`Estimated Fee: ${formatUnits(fee.nativeFee, 18)} ETH`); // Assuming native fee is in ETH (18 decimals)
-
             }
             // --- Solana Fee Quote ---
             else if (sourceChain === 'solana') {
-                debugger
                 if (!solanaConnected || !solanaPublicKey || !umi || !umi.identity.publicKey) {
                     setFeedback('Error: Connect Solana wallet.');
                     setIsQuotingFee(false);
                     return;
                 }
+                
                 const amountBaseUnits = parseUnits(amount, MOFT_TOKEN_DECIMALS_SOLANA);
                 let recipientBytes32: Uint8Array;
+                
                 try {
                     // Assuming recipient is an EVM address (hex)
                     recipientBytes32 = addressToBytes32(recipientAddress as Address); // Use LZ utility
@@ -179,9 +185,7 @@ const BridgeForm: React.FC = () => {
                 console.log('Expected Destination EID:', EndpointId.SEPOLIA_V2_TESTNET); // Verify the imported value
                 console.log('Expected Destination EID:', EndpointId.SEPOLIA_TESTNET); // Verify the imported value
                 console.log('OFT Program ID used:', SOLANA_OFT_PROGRAM_ID);
-
-                console.log('Using Solana RPC:', solanaConnection.rpcEndpoint); // Add before the oft.quote call
-
+                console.log('Using Solana RPC:', solanaConnection.rpcEndpoint);
 
                 console.log('--- Debugging Connection ---');
                 console.log('solanaConnection object:', solanaConnection);
@@ -222,7 +226,6 @@ const BridgeForm: React.FC = () => {
                 setQuotedFee(fee);
                 // Format assuming fee is in Lamports (9 decimals for SOL)
                 setFeedback(`Estimated Fee: ${formatUnits(nativeFee, 9)} SOL`);
-
             }
         } catch (error: any) {
             console.error("Fee Quoting Error:", error);
@@ -235,26 +238,11 @@ const BridgeForm: React.FC = () => {
     };
 
     // Helper hook/function to simulate EVM quoteSend (needed because hooks can't be in handlers)
-    // This is a placeholder structure - adapt using wagmi/actions or useEffect
     const simulateEVMQuoteSend = async (sendParam: any) => {
-        // In a real app, use wagmi's readContract (from actions/core) or useSimulateContract hook properly
-        // This is a simplified placeholder showing the call structure
-        /*
-        const { data, error } = useSimulateContract({
-            address: EVM_OFT_CONTRACT_ADDRESS as Address,
-            abi: EVM_OFT_ABI,
-            functionName: 'quoteSend',
-            args: [sendParam, false], // payInLzToken = false
-            chainId: EVM_CHAIN_ID,
-        });
-        if (error) throw error;
-        return { data: data?.result }; // Adjust based on actual structure
-        */
         console.warn("EVM Quote simulation placeholder used. Implement with useSimulateContract or readContract.");
         // Placeholder return - REPLACE WITH ACTUAL IMPLEMENTATION
         return { data: { nativeFee: parseUnits("0.001", 18), lzTokenFee: 0n } };
     };
-
 
     // --- Bridging Logic ---
     const handleBridge = async (event: FormEvent) => {
@@ -279,6 +267,7 @@ const BridgeForm: React.FC = () => {
                     setIsBridging(false);
                     return;
                 }
+                
                 const amountWei = parseUnits(amount, MOFT_TOKEN_DECIMALS_EVM);
 
                 // Inside handleBridge (EVM part)
@@ -287,7 +276,6 @@ const BridgeForm: React.FC = () => {
                 const toBytes32Bridge = pad(hexAddressBridge, { size: 32 }); // Now pad the Hex string
 
                 // 1. Approve OFT Contract to spend tokens (if necessary)
-                // You might want to check allowance first
                 setFeedback('Approving token spend...');
                 try {
                     const approveHash = await approveAsync({
@@ -297,10 +285,7 @@ const BridgeForm: React.FC = () => {
                         args: [EVM_OFT_CONTRACT_ADDRESS as Address, amountWei], // Approve OFT contract itself
                         chainId: EVM_CHAIN_ID,
                     });
-                    // Optional: Wait for approval confirmation
-                    // const approveReceipt = await publicClient.waitForTransactionReceipt({ hash: approveHash });
                     setFeedback('Approval successful. Sending bridge transaction...');
-
                 } catch (approvalError: any) {
                     console.error("Approval Error:", approvalError);
                     const message = approvalError instanceof BaseError ? approvalError.shortMessage : approvalError.message;
@@ -308,7 +293,6 @@ const BridgeForm: React.FC = () => {
                     setIsBridging(false);
                     return; // Stop if approval fails
                 }
-
 
                 // 2. Send the bridge transaction
                 const sendParam = {
@@ -328,7 +312,6 @@ const BridgeForm: React.FC = () => {
                     args: [sendParam, quotedFee, evmAddress as Address], // Pass SendParam, Fee, Refund Address
                     value: quotedFee.nativeFee, // Pay the native fee
                     chainId: EVM_CHAIN_ID,
-                    // gasLimit might be needed, estimate or set fixed
                 });
 
                 setFeedback('Bridge transaction sent. Waiting for confirmation...');
@@ -336,7 +319,6 @@ const BridgeForm: React.FC = () => {
 
                 // Note: LayerZero Scan link typically uses the *source* tx hash
                 setLzScanLink(getLayerZeroScanLink(txHash, true)); // true for testnet
-
             }
             // --- Solana Bridge Send ---
             else if (sourceChain === 'solana') {
@@ -382,27 +364,13 @@ const BridgeForm: React.FC = () => {
                 );
 
                 // Build Transaction (using web3.js as SDK might require full Umi tx builder setup)
-                // Convert Umi instruction to web3.js format if possible, or reconstruct manually
-                // The oft.send above likely returns Umi instruction format.
-                // For simplicity, let's assume ix is compatible or can be adapted.
-                // This part is complex and might require deeper SDK knowledge or manual instruction creation.
-
-                // Placeholder: Assuming ix is a structure we can adapt
-                // A real implementation needs careful conversion from Umi Ix to Web3js Ix
                 const transaction = new Transaction();
 
                 // Add Compute Budget Instructions (IMPORTANT for Solana)
-                // You'll need logic similar to the `addComputeUnitInstructions` from the hardhat task
-                // Fetch priority fees and set compute unit price/limit
                 const computePriceIx = ComputeBudgetProgram.setComputeUnitPrice({ microLamports: 10000 }); // Example price, fetch dynamically
                 const computeLimitIx = ComputeBudgetProgram.setComputeUnitLimit({ units: 400000 }); // Example limit, estimate based on tx
                 transaction.add(computePriceIx);
                 transaction.add(computeLimitIx);
-
-                // Add the main OFT send instruction (assuming ix is adaptable)
-                // This is the most complex part without full Umi tx building
-                // You might need to manually create the Instruction object based on oft.send's output/logic
-                // transaction.add(ix as TransactionInstruction); // This cast is likely incorrect - needs proper conversion
 
                 console.warn("Solana transaction building requires proper Umi instruction to Web3.js conversion or manual construction.");
                 setFeedback("Solana send logic needs implementation for tx building."); // Indicate missing step
@@ -455,113 +423,150 @@ const BridgeForm: React.FC = () => {
             // Feedback state is likely already set by the catch block
         }
     }, [evmTxReceipt, evmSendError, bridgeTxHash]);
-
-
     return (
-        <div className="p-6 border rounded-xl shadow-md bg-white dark:bg-gray-800 w-full max-w-lg mx-auto mt-10">
-            <h2 className="text-2xl font-semibold mb-5 text-center">LayerZero Bridge (MOFT)</h2>
-            <form onSubmit={handleBridge}>
+        <div className="flex flex-col border rounded-xl shadow-lg bg-white dark:bg-gray-800 w-full max-w-3xl transition-all duration-300 p-6">
+            <p className="text-center text-gray-500 dark:text-gray-400">Transfer MOFT tokens across chains seamlessly</p>
+            
+            <form onSubmit={handleBridge} className="p-2 flex flex-col items-center justify-center *:w-full gap-4">
                 {/* Source Chain Selection */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium mb-2">From Chain:</label>
-                    <div className="flex justify-around">
+                <div className="mb-6 p-7">
+                    <Label className="block text-xl font-medium mb-2 text-gray-700 dark:text-gray-300">From Chain:</Label>
+                    <div className="flex justify-around bg-gray-50 dark:bg-gray-700 p-4 rounded-lg shadow-inner">
                         {/* EVM Radio */}
-                        <label className="flex items-center space-x-2">
-                            <input
+                        <label className="flex items-center space-x-3 cursor-pointer hover:opacity-90 transition-opacity">
+                            <Input
                                 type="radio" name="sourceChain" value="evm"
                                 checked={sourceChain === 'evm'}
                                 onChange={(e) => setSourceChain(e.target.value as 'evm')}
                                 disabled={isLoading || !evmConnected}
-                                className="form-radio h-4 w-4 text-indigo-600"
+                                className="form-radio h-5 w-5 text-indigo-600 focus:ring-indigo-500"
                             />
-                            <span>EVM (Sepolia) {!evmConnected ? '(Not Connected)' : !isCorrectEvmChain ? '(Wrong Network)' : '(Connected)'}</span>
+                            <div>
+                                <span className="font-medium">EVM (Sepolia)</span>
+                                <Badge variant={!evmConnected ? "destructive" : !isCorrectEvmChain ? "secondary" : "default"} className="ml-2">
+                                    {!evmConnected ? 'Not Connected' : !isCorrectEvmChain ? 'Wrong Network' : 'Connected'}
+                                </Badge>
+                            </div>
                         </label>
+                        
                         {/* Solana Radio */}
-                        <label className="flex items-center space-x-2">
+                        <label className="flex items-center space-x-3 cursor-pointer hover:opacity-90 transition-opacity">
                             <input
                                 type="radio" name="sourceChain" value="solana"
                                 checked={sourceChain === 'solana'}
                                 onChange={(e) => setSourceChain(e.target.value as 'solana')}
                                 disabled={isLoading || !solanaConnected}
-                                className="form-radio h-4 w-4 text-indigo-600"
+                                className="form-radio h-5 w-5 text-indigo-600 focus:ring-indigo-500"
                             />
-                            <span>Solana (Devnet) {solanaConnected ? '(Connected)' : '(Not Connected)'}</span>
+                            <div>
+                                <span className="font-medium">Solana (Devnet)</span>
+                                <Badge variant={solanaConnected ? "default" : "destructive"} className="ml-2">
+                                    {solanaConnected ? 'Connected' : 'Not Connected'}
+                                </Badge>
+                            </div>
                         </label>
                     </div>
                 </div>
 
                 {/* Amount Input */}
-                <div className="mb-4">
-                    <label htmlFor="amount" className="block text-sm font-medium mb-1">Amount (MOFT):</label>
-                    <input
-                        type="text" id="amount" value={amount}
-                        onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
-                        placeholder={`e.g., 10.5`}
-                        required disabled={isLoading || !sourceChain}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
-                        inputMode="decimal"
-                    />
+                <div className="mt-6">
+                    <Label htmlFor="amount" className="block text-xl font-medium mb-2 text-gray-700 dark:text-gray-300">Amount (MOFT):</Label>
+                    <div className="relative">
+                        <Input
+                            type="text" id="amount" value={amount}
+                            onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
+                            placeholder="e.g., 10.5"
+                            required disabled={isLoading || !sourceChain}
+                            className="w-full pr-16"
+                            inputMode="decimal"
+                        />
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                            <span className="text-gray-500 dark:text-gray-400 font-medium">MOFT</span>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Recipient Address Input */}
-                <div className="mb-4">
-                    <label htmlFor="recipientAddress" className="block text-sm font-medium mb-1">
+                <div className="mb-6">
+                    <Label htmlFor="recipientAddress" className="block text-xl font-medium mb-2 text-gray-700 dark:text-gray-300">
                         Recipient Address ({sourceChain === 'evm' ? 'Solana' : sourceChain === 'solana' ? 'EVM' : 'Destination'}):
-                    </label>
-                    <input
+                    </Label>
+                    <Input
                         type="text" id="recipientAddress" value={recipientAddress}
                         onChange={(e) => setRecipientAddress(e.target.value)}
                         placeholder={sourceChain === 'evm' ? 'Enter Solana (Base58) address' : sourceChain === 'solana' ? 'Enter EVM (0x...) address' : 'Select source chain first'}
                         required disabled={isLoading || !sourceChain}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
                     />
                 </div>
 
                 {/* Fee Quoting Button & Display */}
-                <div className="mb-4 text-center">
-                    <button
+                <div className="mb-6 text-center">
+                    <Button
                         type="button"
                         onClick={handleQuoteFee}
                         disabled={isLoading || !sourceChain || !amount || !recipientAddress || (sourceChain === 'evm' && !isCorrectEvmChain) || (sourceChain === 'solana' && !solanaConnected)}
-                        className="px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50"
+                        variant="outline"
+                        className="px-6 py-3"
                     >
-                        {isQuotingFee ? 'Calculating Fee...' : 'Get Estimated Fee'}
-                    </button>
+                        {isQuotingFee ? (
+                            <span className="flex items-center justify-center">
+                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Calculating Fee...
+                            </span>
+                        ) : 'Get Estimated Fee'}
+                    </Button>
                     {quotedFee && !isQuotingFee && (
-                        <p className="mt-2 text-sm text-gray-400">
-                            Estimated LZ Fee: {formatUnits(quotedFee.nativeFee, sourceChain === 'evm' ? 18 : 9)} {sourceChain === 'evm' ? 'ETH' : 'SOL'}
-                        </p>
+                        <div className="mt-4 p-4 bg-indigo-50 dark:bg-indigo-900/30 rounded-lg shadow-inner">
+                            <p className="text-sm text-indigo-700 dark:text-indigo-300 font-medium">
+                                Estimated Fee: {formatUnits(quotedFee.nativeFee, sourceChain === 'evm' ? 18 : 9)} {sourceChain === 'evm' ? 'ETH' : 'SOL'}
+                            </p>
+                        </div>
                     )}
                 </div>
 
-
                 {/* Submit Button */}
-                <button
+                <Button
                     type="submit"
                     disabled={isLoading || !quotedFee || (sourceChain === 'evm' && !isCorrectEvmChain) || (sourceChain === 'solana' && !solanaConnected)}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full"
                 >
-                    {isBridging ? 'Bridging...' : `Bridge MOFT from ${sourceChain?.toUpperCase() || '...'}`}
-                </button>
+                    {isBridging ? (
+                        <span className="flex items-center justify-center">
+                            <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Bridging...
+                        </span>
+                    ) : `Bridge MOFT from ${sourceChain?.toUpperCase() || '...'}`}
+                </Button>
             </form>
 
             {/* Feedback Area */}
             {feedback && (
-                <p className={`mt-4 text-sm ${feedback.startsWith('Error:') ? 'text-red-500' : 'text-green-500'}`}>
-                    {feedback}
-                </p>
-            )}
-            {bridgeTxHash && (
-                <p className="mt-2 text-xs break-all">
-                    Source Tx: {bridgeTxHash}
-                </p>
-            )}
-            {lzScanLink && (
-                <p className="mt-1 text-xs">
-                    <a href={lzScanLink} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
-                        [Track on LayerZero Scan]
-                    </a>
-                </p>
+                <div className={`mt-6 p-4 rounded-lg ${feedback.startsWith('Error:') ? 'bg-red-50 dark:bg-red-900/20' : 'bg-green-50 dark:bg-green-900/20'}`}>
+                    <p className={`text-sm font-medium ${feedback.startsWith('Error:') ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
+                        {feedback}
+                    </p>
+                    {bridgeTxHash && (
+                        <p className="mt-2 text-xs break-all text-gray-600 dark:text-gray-400">
+                            Source Tx: {bridgeTxHash}
+                        </p>
+                    )}
+                    {lzScanLink && (
+                        <p className="mt-2 text-xs">
+                            <a href={lzScanLink} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-blue-500 hover:text-blue-400 transition-colors">
+                                <span>Track on LayerZero Scan</span>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 ml-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                </svg>
+                            </a>
+                        </p>
+                    )}
+                </div>
             )}
         </div>
     );
