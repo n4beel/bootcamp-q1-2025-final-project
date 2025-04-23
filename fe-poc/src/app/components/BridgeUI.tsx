@@ -137,7 +137,7 @@ const BridgeUI = ({
                     disabled={isLoading || !quotedFee || (sourceChain === 'evm' && !isCorrectEvmChain) || (sourceChain === 'solana' && !solanaConnected)}
                     className='bridge-button'
                 >
-                    {isBridging ? 'Bridging...' : `Bridge`}
+                    {isBridging ? 'Bridging...' : isQuotingFee ? 'Fetching fee...' : `Bridge`}
                 </button>
             </form>
 
@@ -151,9 +151,17 @@ const BridgeUI = ({
                 <p className="feedback info">
                     Transaction Info:
                     <br />
-                    <a href={`https://sepolia.etherscan.io/tx/${bridgeTxHash}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
-                        [Track EVM transaction]
-                    </a>
+                    {
+                        sourceChain === 'evm' ? (
+                            <a href={`https://sepolia.etherscan.io/tx/${bridgeTxHash}`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+                                [Track EVM transaction]
+                            </a>
+                        ) : (
+                            <a href={`https://solscan.io/tx/${bridgeTxHash}?cluster=devnet`} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
+                                [Track Solana transaction]
+                            </a>
+                        )
+                    }
                     <br />
                     <a href={lzScanLink} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
                         [Track on LayerZero Scan]
