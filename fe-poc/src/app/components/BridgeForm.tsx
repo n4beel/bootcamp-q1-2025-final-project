@@ -95,8 +95,13 @@ const BridgeForm: React.FC = () => {
         setLzScanLink('');
         setIsQuotingFee(false);
         setIsBridging(false);
-        getBalanceOnSolana();
+
     }, [sourceChain]);
+
+    useEffect(() => {
+        getBalanceOnSolana();
+    }, [feedback])
+
 
     const tokenContractAddress = EVM_OFT_CONTRACT_ADDRESS;
     const tokenAbi = [
@@ -341,8 +346,8 @@ const BridgeForm: React.FC = () => {
                 const fee = { nativeFee, lzTokenFee: 0n }; // Assuming lzTokenFee is 0 if payInLzToken is false
                 setQuotedFee(fee);
                 // Format assuming fee is in Lamports (9 decimals for SOL)
-                setFeedback(`Estimated Fee: ${formatUnits(nativeFee, 9)} SOL`);
-                setFeedbackStatus('info');
+                // setFeedback(`Estimated Fee: ${formatUnits(nativeFee, 9)} SOL`);
+                // setFeedbackStatus('info');
 
             }
         } catch (error: any) {
@@ -487,6 +492,8 @@ const BridgeForm: React.FC = () => {
                     TOKEN_PROGRAM_ID // SPL Token Program ID
                 );
 
+                console.log("🚀 ~ handleBridge ~ amountBaseUnits:", amountBaseUnits)
+
                 const ix = await oft.send(
                     umi.rpc as any, // Cast to any for compatibility
                     {
@@ -535,11 +542,11 @@ const BridgeForm: React.FC = () => {
                 // transaction.add(ix as TransactionInstruction); // This cast is likely incorrect - needs proper conversion
 
                 console.warn("Solana transaction building requires proper Umi instruction to Web3.js conversion or manual construction.");
-                setFeedback("Solana send logic needs implementation for tx building."); // Indicate missing step
-                setFeedbackStatus('info');
-                setIsBridging(false); // Stop here for now
+                // setFeedback("Solana send logic needs implementation for tx building."); // Indicate missing step
+                // setFeedbackStatus('info');
+                // setIsBridging(false); // Stop here for now
 
-                /* --- If transaction building was successful: ---
+                // If transaction building was successful: ---
                 const {
                     context: { slot: minContextSlot },
                     value: { blockhash, lastValidBlockHeight }
@@ -551,12 +558,14 @@ const BridgeForm: React.FC = () => {
                 const signature = await solanaConnection.sendRawTransaction(signedTransaction.serialize());
 
                 setFeedback('Bridge transaction sent. Confirming...');
+                setFeedbackStatus('info');
                 await solanaConnection.confirmTransaction({ blockhash, lastValidBlockHeight, signature }, 'confirmed');
 
                 setBridgeTxHash(signature);
                 setLzScanLink(getLayerZeroScanLink(signature, true)); // true for testnet
                 setFeedback('Solana bridge transaction confirmed!');
-                */
+                setFeedbackStatus('success');
+
             }
         } catch (error: any) {
             console.error("Bridging Error:", error);
