@@ -31,6 +31,7 @@ import {
 
 import { toBigIntTokenAmount } from '../utils/utils'; // Adjust path if needed
 import { connection } from 'next/server';
+import BridgeUI from './BridgeUI';
 
 // Define types for fee structure
 type MessagingFee = {
@@ -41,13 +42,16 @@ type MessagingFee = {
 const BridgeForm: React.FC = () => {
     const [amount, setAmount] = useState<string>('');
     const [recipientAddress, setRecipientAddress] = useState<string>('');
-    const [sourceChain, setSourceChain] = useState<'solana' | 'evm' | null>(null);
+    const [sourceChain, setSourceChain] = useState<'solana' | 'evm' | null>('evm');
     const [isQuotingFee, setIsQuotingFee] = useState<boolean>(false);
     const [isBridging, setIsBridging] = useState<boolean>(false);
     const [feedback, setFeedback] = useState<string>('');
+    const [feedbackStatus, setFeedbackStatus] = useState<'success' | 'info' | 'error' | null>(null);
     const [quotedFee, setQuotedFee] = useState<MessagingFee | null>(null);
     const [bridgeTxHash, setBridgeTxHash] = useState<string>('');
     const [lzScanLink, setLzScanLink] = useState<string>('');
+    const [solBalance, setSolBalance] = useState<number>(0)
+    const [ethBalance, setEthBalance] = useState<number>(0)
 
     // === EVM Hooks ===
     const { address: evmAddress, isConnected: evmConnected, chainId: evmChainId } = useEvmAccount();
@@ -85,27 +89,110 @@ const BridgeForm: React.FC = () => {
         setAmount('');
         setRecipientAddress('');
         setFeedback('');
+        setFeedbackStatus(null);
         setQuotedFee(null);
         setBridgeTxHash('');
         setLzScanLink('');
         setIsQuotingFee(false);
         setIsBridging(false);
+        getBalanceOnSolana();
     }, [sourceChain]);
+
+    const tokenContractAddress = EVM_OFT_CONTRACT_ADDRESS;
+    const tokenAbi = [
+        {
+            "constant": true,
+            "inputs": [{ "name": "_owner", "type": "address" }],
+            "name": "balanceOf",
+            "outputs": [{ "name": "balance", "type": "uint256" }],
+            "type": "function"
+        },
+        {
+            "constant": true,
+            "inputs": [],
+            "name": "decimals",
+            "outputs": [{ "name": "", "type": "uint8" }],
+            "type": "function"
+        }
+    ];
+
+    const { data: balance, refetch: refetchBalance } = useReadContract({
+        address: tokenContractAddress as Address,
+        abi: tokenAbi,
+        functionName: "balanceOf",
+        args: [evmAddress],
+        chainId: EVM_CHAIN_ID,
+    });
+
+    const { data: decimals, refetch: refetchDecimals } = useReadContract({
+        address: tokenContractAddress as Address,
+        abi: tokenAbi,
+        functionName: "decimals",
+        chainId: EVM_CHAIN_ID,
+    });
+
+    useEffect(() => {
+        if (balance && decimals) {
+            console.log("🚀 ~ useEffect ~ updating balance");
+            console.log("🚀 ~ useEffect ~ decimals:", decimals);
+            console.log("🚀 ~ useEffect ~ balance:", balance);
+            const formattedBalance = parseFloat(formatUnits(balance as any, decimals as any));
+            setEthBalance(formattedBalance); // Set balance in MOFT tokens
+        }
+    }, [balance, decimals]);
+
+    useEffect(() => {
+        refetchBalance();
+        refetchDecimals();
+    }, [feedback, refetchBalance, refetchDecimals]);
+
+    useEffect(() => {
+        if (amount && recipientAddress) {
+            handleQuoteFee();
+        }
+    }, [amount, recipientAddress]);
+
+
+    const getBalanceOnSolana = useCallback(async () => {
+        if (!solanaPublicKey || !solanaConnection) return;
+        try {
+            const tokenMintAddress = new Web3PublicKey(SOLANA_MOFT_MINT_ADDRESS);
+            const associatedTokenAddress = getAssociatedTokenAddressSync(
+                tokenMintAddress,
+                solanaPublicKey,
+                false, // allowOwnerOffCurve - typically false for user wallets
+                TOKEN_PROGRAM_ID
+            );
+
+            const tokenAccountInfo = await solanaConnection.getParsedAccountInfo(associatedTokenAddress);
+            if (tokenAccountInfo.value) {
+                const tokenAmount = (tokenAccountInfo.value.data as any).parsed.info.tokenAmount;
+                setSolBalance(parseFloat(tokenAmount.uiAmountString || "0")); // Set balance in MOFT tokens
+            } else {
+                setSolBalance(0); // No associated token account found, balance is 0
+            }
+        } catch (error) {
+            console.error("Error fetching MOFT token balance on Solana:", error);
+        }
+    }, [solanaPublicKey, solanaConnection]);
 
     // --- Fee Quoting Logic ---
     const handleQuoteFee = async () => {
         setFeedback('');
+        setFeedbackStatus(null);
         setQuotedFee(null);
         setBridgeTxHash('');
         setLzScanLink('');
         if (!sourceChain || !amount || !recipientAddress) {
             setFeedback('Error: Please fill in all fields.');
+            setFeedbackStatus('error');
             return;
         }
 
         const numericAmount = parseFloat(amount);
         if (isNaN(numericAmount) || numericAmount <= 0) {
             setFeedback('Error: Invalid amount.');
+            setFeedbackStatus('error');
             return;
         }
 
@@ -116,6 +203,7 @@ const BridgeForm: React.FC = () => {
             if (sourceChain === 'evm') {
                 if (!isCorrectEvmChain || !evmAddress) {
                     setFeedback('Error: Connect to Sepolia with an EVM wallet.');
+                    setFeedbackStatus('error');
                     setIsQuotingFee(false);
                     return;
                 }
@@ -129,6 +217,7 @@ const BridgeForm: React.FC = () => {
                     toBytes32 = pad(hexAddress, { size: 32 }); // Now pad the Hex string
                 } catch (e) {
                     setFeedback('Error: Invalid Solana recipient address format.');
+                    setFeedbackStatus('error');
                     setIsQuotingFee(false);
                     return;
                 }
@@ -158,7 +247,7 @@ const BridgeForm: React.FC = () => {
 
                 const fee = quoteResult as MessagingFee; // Adjust based on actual return type
                 setQuotedFee(fee);
-                setFeedback(`Estimated Fee: ${formatUnits(fee.nativeFee, 18)} ETH`); // Assuming native fee is in ETH (18 decimals)
+                // setFeedback(`Estimated Fee: ${formatUnits(fee.nativeFee, 18)} ETH`); // Assuming native fee is in ETH (18 decimals)
 
             }
             // --- Solana Fee Quote ---
@@ -170,6 +259,7 @@ const BridgeForm: React.FC = () => {
 
                 if (!solanaConnected || !solanaPublicKey || !umi || !umi.identity.publicKey) {
                     setFeedback('Error: Connect Solana wallet.');
+                    setFeedbackStatus('error');
                     setIsQuotingFee(false);
                     return;
                 }
@@ -180,6 +270,7 @@ const BridgeForm: React.FC = () => {
                     recipientBytes32 = addressToBytes32(recipientAddress); // Use LZ utility
                 } catch (e) {
                     setFeedback('Error: Invalid EVM recipient address format.');
+                    setFeedbackStatus('error');
                     setIsQuotingFee(false);
                     return;
                 }
@@ -204,6 +295,7 @@ const BridgeForm: React.FC = () => {
                 // Check explicitly if connection or rpc seems invalid before calling
                 if (!solanaConnection || !umi?.rpc) {
                     setFeedback("Error: Solana connection or Umi RPC is not ready.");
+                    setFeedbackStatus('error');
                     setIsQuotingFee(false);
                     return; // Prevent calling oft.quote if objects are missing
                 }
@@ -250,12 +342,14 @@ const BridgeForm: React.FC = () => {
                 setQuotedFee(fee);
                 // Format assuming fee is in Lamports (9 decimals for SOL)
                 setFeedback(`Estimated Fee: ${formatUnits(nativeFee, 9)} SOL`);
+                setFeedbackStatus('info');
 
             }
         } catch (error: any) {
             console.error("Fee Quoting Error:", error);
             const message = error instanceof BaseError ? error.shortMessage : error.message;
             setFeedback(`Error quoting fee: ${message || 'Unknown error'}`);
+            setFeedbackStatus('error');
             setQuotedFee(null);
         } finally {
             setIsQuotingFee(false);
@@ -289,10 +383,12 @@ const BridgeForm: React.FC = () => {
         event.preventDefault();
         if (!quotedFee || !sourceChain || !amount || !recipientAddress) {
             setFeedback('Error: Please quote the fee first and ensure all fields are filled.');
+            setFeedbackStatus('error');
             return;
         }
 
         setFeedback('');
+        setFeedbackStatus(null);
         setBridgeTxHash('');
         setLzScanLink('');
         setIsBridging(true);
@@ -304,6 +400,7 @@ const BridgeForm: React.FC = () => {
             if (sourceChain === 'evm') {
                 if (!isCorrectEvmChain || !evmAddress || !writeContractAsync || !approveAsync) {
                     setFeedback('Error: Connect to Sepolia with an EVM wallet.');
+                    setFeedbackStatus('error');
                     setIsBridging(false);
                     return;
                 }
@@ -317,6 +414,7 @@ const BridgeForm: React.FC = () => {
                 // 1. Approve OFT Contract to spend tokens (if necessary)
                 // You might want to check allowance first
                 setFeedback('Approving token spend...');
+                setFeedbackStatus('info');
                 try {
                     const approveHash = await approveAsync({
                         address: EVM_OFT_CONTRACT_ADDRESS as Address, // Assuming OFT is also the ERC20
@@ -328,11 +426,13 @@ const BridgeForm: React.FC = () => {
                     // Optional: Wait for approval confirmation
                     // const approveReceipt = await publicClient.waitForTransactionReceipt({ hash: approveHash });
                     setFeedback('Approval successful. Sending bridge transaction...');
+                    setFeedbackStatus('success');
 
                 } catch (approvalError: any) {
                     console.error("Approval Error:", approvalError);
                     const message = approvalError instanceof BaseError ? approvalError.shortMessage : approvalError.message;
                     setFeedback(`Error during approval: ${message}`);
+                    setFeedbackStatus('error');
                     setIsBridging(false);
                     return; // Stop if approval fails
                 }
@@ -360,6 +460,7 @@ const BridgeForm: React.FC = () => {
                 });
 
                 setFeedback('Bridge transaction sent. Waiting for confirmation...');
+                setFeedbackStatus('info');
                 setBridgeTxHash(txHash);
 
                 // Note: LayerZero Scan link typically uses the *source* tx hash
@@ -370,6 +471,7 @@ const BridgeForm: React.FC = () => {
             else if (sourceChain === 'solana') {
                 if (!solanaConnected || !solanaPublicKey || !umi || !umi.identity.publicKey || !signTransaction) {
                     setFeedback('Error: Connect Solana wallet.');
+                    setFeedbackStatus('error');
                     setIsBridging(false);
                     return;
                 }
@@ -434,6 +536,7 @@ const BridgeForm: React.FC = () => {
 
                 console.warn("Solana transaction building requires proper Umi instruction to Web3.js conversion or manual construction.");
                 setFeedback("Solana send logic needs implementation for tx building."); // Indicate missing step
+                setFeedbackStatus('info');
                 setIsBridging(false); // Stop here for now
 
                 /* --- If transaction building was successful: ---
@@ -459,6 +562,7 @@ const BridgeForm: React.FC = () => {
             console.error("Bridging Error:", error);
             const message = error instanceof BaseError ? error.shortMessage : error.message;
             setFeedback(`Error during bridging: ${message || 'Unknown error'}`);
+            setFeedbackStatus('error');
             setBridgeTxHash('');
             setLzScanLink('');
         } finally {
@@ -468,7 +572,6 @@ const BridgeForm: React.FC = () => {
     };
 
     async function BridgeTokensFromSolanaToEvm() {
-        debugger;
         // setIsLoading(true);
         // toast.success('Please ready to sign the transaction');
         const walletClient = solanaWallet;
@@ -477,6 +580,7 @@ const BridgeForm: React.FC = () => {
             // console.log(chainConfig, 'cja');
             if (+amount <= 0) {
                 setFeedback('Please enter a valid token amount');
+                setFeedbackStatus('error');
                 return;
             }
 
@@ -512,6 +616,7 @@ const BridgeForm: React.FC = () => {
 
             if (!walletClient)
                 setFeedback('Please refresh the site');
+            setFeedbackStatus('info');
 
             const umi = createUmi(connection.rpcEndpoint)
                 .use(mplToolbox())
@@ -576,6 +681,7 @@ const BridgeForm: React.FC = () => {
             console.log('🚀 ~ useDeposit ~ balanceBigInt < nativeFee:', balanceBigInt < nativeFee);
             if (balanceBigInt < nativeFee) {
                 setFeedback('Not enough Sol');
+                setFeedbackStatus('error');
             }
             const ix = await oft.send(
                 umi.rpc as any,
@@ -653,6 +759,7 @@ const BridgeForm: React.FC = () => {
             setAmount('');
 
             setFeedback('Bridge transaction sent. Waiting for confirmation...');
+            setFeedbackStatus('info');
             setBridgeTxHash(signature);
 
             // Note: LayerZero Scan link typically uses the *source* tx hash
@@ -668,6 +775,7 @@ const BridgeForm: React.FC = () => {
             setRecipientAddress('');
             setAmount('');
             setFeedback('An error occurred during approval');
+            setFeedbackStatus('error');
             return false;
         }
     }
@@ -680,7 +788,8 @@ const BridgeForm: React.FC = () => {
 
     useEffect(() => {
         if (evmTxReceipt && bridgeTxHash === evmTxReceipt.transactionHash) {
-            setFeedback(`EVM bridge transaction confirmed! Tx: ${bridgeTxHash}`);
+            setFeedback(`EVM bridge transaction confirmed!`);
+            setFeedbackStatus('success');
             // LZ Scan link was already set
         } else if (evmSendError) {
             // Error handled in main try/catch, but could add specific feedback here
@@ -689,119 +798,34 @@ const BridgeForm: React.FC = () => {
         }
     }, [evmTxReceipt, evmSendError, bridgeTxHash]);
 
+    const uiProps = {
+        handleBridge,
+        sourceChain,
+        isLoading,
+        evmConnected,
+        isCorrectEvmChain,
+        solanaConnected,
+        setAmount,
+        amount,
+        feedback,
+        bridgeTxHash,
+        lzScanLink,
+        formatUnits,
+        quotedFee,
+        isBridging,
+        setSourceChain,
+        handleQuoteFee,
+        setRecipientAddress,
+        recipientAddress,
+        isQuotingFee,
+        feedbackStatus,
+        solBalance,
+        ethBalance
+    }
+
 
     return (
-        <div className="p-6 border rounded-xl shadow-md bg-white dark:bg-gray-800 w-full max-w-lg mx-auto mt-10">
-            <h2 className="text-2xl font-semibold mb-5 text-center">LayerZero Bridge (MOFT)</h2>
-            <form onSubmit={handleBridge}>
-                {/* Source Chain Selection */}
-                <div className="mb-4">
-                    <label className="block text-sm font-medium mb-2">From Chain:</label>
-                    <div className="flex justify-around">
-                        {/* EVM Radio */}
-                        <label className="flex items-center space-x-2">
-                            <input
-                                type="radio" name="sourceChain" value="evm"
-                                checked={sourceChain === 'evm'}
-                                onChange={(e) => setSourceChain(e.target.value as 'evm')}
-                                disabled={isLoading || !evmConnected}
-                                className="form-radio h-4 w-4 text-indigo-600"
-                            />
-                            <span>EVM (Sepolia) {!evmConnected ? '(Not Connected)' : !isCorrectEvmChain ? '(Wrong Network)' : '(Connected)'}</span>
-                        </label>
-                        {/* Solana Radio */}
-                        <label className="flex items-center space-x-2">
-                            <input
-                                type="radio" name="sourceChain" value="solana"
-                                checked={sourceChain === 'solana'}
-                                onChange={(e) => setSourceChain(e.target.value as 'solana')}
-                                disabled={isLoading || !solanaConnected}
-                                className="form-radio h-4 w-4 text-indigo-600"
-                            />
-                            <span>Solana (Devnet) {solanaConnected ? '(Connected)' : '(Not Connected)'}</span>
-                        </label>
-                    </div>
-                </div>
-
-                {/* Amount Input */}
-                <div className="mb-4">
-                    <label htmlFor="amount" className="block text-sm font-medium mb-1">Amount (MOFT):</label>
-                    <input
-                        type="text" id="amount" value={amount}
-                        onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
-                        placeholder={`e.g., 10.5`}
-                        required disabled={isLoading || !sourceChain}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
-                        inputMode="decimal"
-                    />
-                </div>
-
-                {/* Recipient Address Input */}
-                <div className="mb-4">
-                    <label htmlFor="recipientAddress" className="block text-sm font-medium mb-1">
-                        Recipient Address ({sourceChain === 'evm' ? 'Solana' : sourceChain === 'solana' ? 'EVM' : 'Destination'}):
-                    </label>
-                    <input
-                        type="text" id="recipientAddress" value={recipientAddress}
-                        onChange={(e) => setRecipientAddress(e.target.value)}
-                        placeholder={sourceChain === 'evm' ? 'Enter Solana (Base58) address' : sourceChain === 'solana' ? 'Enter EVM (0x...) address' : 'Select source chain first'}
-                        required disabled={isLoading || !sourceChain}
-                        className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 dark:bg-gray-700 dark:border-gray-600 disabled:opacity-50"
-                    />
-                </div>
-
-                {/* Fee Quoting Button & Display */}
-                <div className="mb-4 text-center">
-                    <button
-                        type="button"
-                        onClick={handleQuoteFee}
-                        disabled={isLoading || !sourceChain || !amount || !recipientAddress || (sourceChain === 'evm' && !isCorrectEvmChain) || (sourceChain === 'solana' && !solanaConnected)}
-                        className="px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-gray-600 hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50"
-                    >
-                        {isQuotingFee ? 'Calculating Fee...' : 'Get Estimated Fee'}
-                    </button>
-                    {quotedFee && !isQuotingFee && (
-                        <>
-                            <p className="mt-2 text-sm text-gray-400">
-                                Estimated Native Token Fee: {formatUnits(quotedFee.nativeFee, sourceChain === 'evm' ? 18 : 9)} {sourceChain === 'evm' ? 'ETH' : 'SOL'}
-                            </p>
-                            <p className="mt-2 text-sm text-gray-400">
-                                Estimated LZ Fee: {formatUnits(quotedFee.lzTokenFee, sourceChain === 'evm' ? 18 : 9)} {sourceChain === 'evm' ? 'ETH' : 'SOL'}
-                            </p>
-                        </>
-                    )}
-                </div>
-
-
-                {/* Submit Button */}
-                <button
-                    type="submit"
-                    disabled={isLoading || !quotedFee || (sourceChain === 'evm' && !isCorrectEvmChain) || (sourceChain === 'solana' && !solanaConnected)}
-                    className="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {isBridging ? 'Bridging...' : `Bridge MOFT from ${sourceChain?.toUpperCase() || '...'}`}
-                </button>
-            </form>
-
-            {/* Feedback Area */}
-            {feedback && (
-                <p className={`mt-4 text-sm ${feedback.startsWith('Error:') ? 'text-red-500' : 'text-green-500'}`}>
-                    {feedback}
-                </p>
-            )}
-            {bridgeTxHash && (
-                <p className="mt-2 text-xs break-all">
-                    Source Tx: {bridgeTxHash}
-                </p>
-            )}
-            {lzScanLink && (
-                <p className="mt-1 text-xs">
-                    <a href={lzScanLink} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300">
-                        [Track on LayerZero Scan]
-                    </a>
-                </p>
-            )}
-        </div>
+        <BridgeUI {...uiProps} />
     );
 };
 
