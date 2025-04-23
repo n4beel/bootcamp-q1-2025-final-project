@@ -7,13 +7,13 @@
 
 This project implements a cross-chain token bridge facilitating the transfer of assets between the Solana and Ethereum blockchains. It utilizes the LayerZero omnichain interoperability protocol as the underlying messaging layer to enable seamless communication and asset transfers between the two distinct ecosystems.
 
-The primary goal is to allow users to bridge a native project token, which exists canonically on both Solana and Ethereum, as well as standard popular tokens like stablecoins and native chain assets (ETH/SOL). The architecture is designed with extensibility in mind, allowing for the future addition of more supported tokens and blockchains.
+The primary goal is to allow users to bridge a native project token, which exists canonically on both Solana and Ethereum, as well as standard popular tokens like stablecoins and native chain assets (ETH/SOL) in the future. The architecture is designed with extensibility in mind, allowing for the future addition of more supported tokens and blockchains.
 
 ## Core Features & Specifications
 
 *   **Cross-Chain Bridging:** Enables token transfers between Solana and Ethereum (and vice-versa).
 *   **Native Token Support:** Allows bridging of the project's native token, maintaining a consistent supply across supported chains (likely using LayerZero's OFT - Omnichain Fungible Token standard).
-*   **Standard Token Support:** Facilitates bridging of common assets:
+*   **Standard Token Support:** Facilitates bridging of common assets [in progress]:
     *   USDC (SPL on Solana <-> ERC20 on Ethereum)
     *   USDT (SPL on Solana <-> ERC20 on Ethereum)
     *   SOL (Native/Wrapped SOL on Solana <-> Wrapped SOL representation on Ethereum, or potentially WETH via intermediate swap) - *Exact mechanism TBD*
@@ -59,7 +59,6 @@ graph TD
     SolanaLZEndpoint --> SolanaBridge
 ```
 
-*(This diagram uses Mermaid syntax. You can render it using tools/plugins that support Mermaid.)*
 
 **Components:**
 
@@ -84,7 +83,6 @@ graph TD
 
 ## Getting Started (Placeholder)
 
-*(Instructions on setting up the development environment, installing dependencies, deploying contracts, and running tests will be added here.)*
 
 ### Prerequisites
 
@@ -99,11 +97,11 @@ graph TD
 
 ```bash
 # Clone the repository
-git clone <repository-url>
-cd <repository-directory>
+git clone https://github.com/n4beel/bootcamp-q1-2025-final-project.git
+cd bootcamp-q1-2025-final-project.git
 
 # Install frontend dependencies (example)
-# cd frontend && npm install
+# cd fe-poc && npm install
 
 # Install contract dependencies (example)
 # cd contracts/ethereum && npm install
@@ -112,11 +110,8 @@ cd <repository-directory>
 
 ### Deployment
 
-*(Steps for deploying to testnets and mainnets)*
-
 ### Testing
 
-*(Instructions on how to run unit and integration tests)*
 
 ## Future Enhancements
 
@@ -127,11 +122,7 @@ cd <repository-directory>
 
 ## Contributing (Placeholder)
 
-*(Contribution guidelines will be added here.)*
-
 ## License (Placeholder)
-
-*(Consider adding a license, e.g., MIT License)*
 
 ```
 MIT License
