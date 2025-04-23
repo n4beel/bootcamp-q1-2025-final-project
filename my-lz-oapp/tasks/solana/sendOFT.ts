@@ -91,6 +91,28 @@ task('lz:oft:solana:send', 'Send tokens from Solana to a target EVM chain')
             }
         )
 
+        console.log("in script",
+            {
+                payer: umiWalletSigner,
+                tokenMint: mint,
+                tokenEscrow: umiEscrowPublicKey,
+                tokenSource: tokenAccount[0],
+            },
+            {
+                to: Buffer.from(recipientAddressBytes32),
+                dstEid: toEid,
+                amountLd: BigInt(amount),
+                minAmountLd: (BigInt(amount) * BigInt(9)) / BigInt(10),
+                options: Buffer.from(''),
+                composeMsg: undefined,
+                nativeFee,
+            },
+            {
+                oft: oftProgramId,
+                token: tokenProgramId,
+            }
+        )
+
         const ix = await oft.send(
             umi.rpc,
             {
