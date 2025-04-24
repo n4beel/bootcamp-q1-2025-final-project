@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Sora:wght@100..800&family=Space+Grotesk:wght@300..700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&family=Sora:wght@100..800&family=Space+Grotesk:wght@300..700&display=swap");
 
 :root {
   --background: #ffffff;
@@ -29,8 +29,12 @@ body {
 
 .bg {
   height: 100vh;
-  background: #271E3A;
-  background: linear-gradient(0deg, rgba(39, 30, 58, 1) 20%, rgba(0, 0, 0, 1) 100%);
+  background: #271e3a;
+  background: linear-gradient(
+    0deg,
+    rgba(39, 30, 58, 1) 20%,
+    rgba(0, 0, 0, 1) 100%
+  );
 }
 
 .selector {
@@ -84,7 +88,6 @@ body {
   position: relative;
 }
 
-
 .amount-input input,
 .address-input input {
   background-color: rgba(0, 0, 0, 0);
@@ -98,7 +101,6 @@ body {
 .amount-input input {
   font-size: 24px;
 }
-
 
 .amount-input .fee-container {
   padding: 0 20px;
@@ -127,18 +129,18 @@ body {
 }
 
 .feedback.success {
-  background-color: #D4EDDA;
+  background-color: #d4edda;
   color: #155724;
 }
 
 .feedback.error {
-  background-color: #F8D7DA;
-  color: #721C24;
+  background-color: #f8d7da;
+  color: #721c24;
 }
 
 .feedback.info {
-  background-color: #D1ECF1;
-  color: #0C5460;
+  background-color: #d1ecf1;
+  color: #0c5460;
 }
 
 .bridge-button {
@@ -181,7 +183,6 @@ a {
   }
 }
 
-
 .wallet-adapter-button {
   background-color: transparent;
   border: none;
@@ -189,7 +190,8 @@ a {
   cursor: pointer;
   display: flex;
   align-items: center;
-  font-family: 'DM Sans', 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: "DM Sans", "Roboto", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
   font-size: 16px;
   font-weight: 600;
   height: 48px;
@@ -261,7 +263,8 @@ a {
   opacity: 0;
   visibility: hidden;
   transition: opacity 200ms ease, transform 200ms ease, visibility 200ms;
-  font-family: 'DM Sans', 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: "DM Sans", "Roboto", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
 }
 
 .wallet-adapter-dropdown-list-active {
@@ -298,7 +301,8 @@ a {
   fill: #999;
 }
 
-.wallet-adapter-modal-collapse-button.wallet-adapter-modal-collapse-button-active svg {
+.wallet-adapter-modal-collapse-button.wallet-adapter-modal-collapse-button-active
+  svg {
   transform: rotate(180deg);
   transition: transform ease-in 150ms;
 }
@@ -384,7 +388,8 @@ a {
   border-radius: 10px;
   background: #10141f;
   box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.6);
-  font-family: 'DM Sans', 'Roboto', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  font-family: "DM Sans", "Roboto", "Helvetica Neue", Helvetica, Arial,
+    sans-serif;
   flex: 1;
 }
 
@@ -432,7 +437,7 @@ a {
 .wallet-adapter-modal-list .wallet-adapter-button span {
   margin-left: auto;
   font-size: 14px;
-  opacity: .6;
+  opacity: 0.6;
 }
 
 .wallet-adapter-modal-list-more {
