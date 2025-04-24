@@ -1,7 +1,6 @@
 "use client";
 
 import dynamic from "next/dynamic";
-
 import Loading from "./components/Loading";
 import Navbar from "./components/Navbar";
 
@@ -19,7 +18,7 @@ export default function Home() {
           {/* Bridge Form */}
           <BridgeForm />
         </div>
-      </main>
-    </div>
+      </main >
+    </div >
   );
 }
