@@ -1,5 +1,7 @@
 import React from "react";
 
+import styles from "../styles/page.module.scss";
+
 const BridgeUI = ({
   handleBridge,
   sourceChain,
@@ -23,21 +25,7 @@ const BridgeUI = ({
   ethBalance,
 }: any) => {
   return (
-    <div
-      style={{
-        backgroundColor: "#151516",
-        padding: 20,
-        borderRadius: 24,
-        width: "100%",
-        maxWidth: 500,
-        color: "white",
-        position: "absolute",
-        top: "50%",
-        left: "50%",
-        transform: "translate(-50%, -50%)",
-        boxShadow: "0 4px 8px rgba(0, 0, 0, 0.2)",
-      }}
-    >
+    <div className={styles.bridgeComponent}>
       <form onSubmit={handleBridge}>
         {/* Source Chain Selection */}
         <div className="selector">

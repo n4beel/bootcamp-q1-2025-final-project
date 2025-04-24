@@ -1,0 +1,87 @@
+.bridgeComponent {
+  background-color: #151516;
+  padding: 20px;
+  border-radius: 24px;
+  width: 100%;
+  max-width: 500px;
+  color: white;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.wallet {
+  &Connected {
+    display: flex;
+    gap: 12px;
+  }
+
+  &ConnectButton {
+    background-color: white;
+    color: black;
+    border-radius: 40px;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    height: 48px;
+    line-height: 48px;
+    padding: 0 24px;
+
+    &Solana {
+      background-color: white;
+      color: black;
+      border-radius: 40px;
+      font-family: "Sora", sans-serif;
+
+      span {
+        font-size: 16px;
+        font-weight: 600;
+      }
+    }
+  }
+
+  &OpenAccountButton {
+    background-color: white;
+    color: black;
+    border-radius: 40px;
+    border: none;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    height: 48px;
+    line-height: 48px;
+    padding: 0 24px;
+    display: flex;
+    align-items: center;
+
+    img {
+      margin-right: 8px;
+    }
+  }
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+
+  &Logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+
+    p {
+      font-size: 22px;
+      font-weight: 600;
+    }
+  }
+
+  &Buttons {
+    display: flex;
+    gap: 10px;
+  }
+}

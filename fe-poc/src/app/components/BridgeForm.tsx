@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  FormEvent,
+} from "react";
 
 import {
   useWallet as useSolanaWallet,
@@ -92,6 +98,7 @@ const BridgeForm: React.FC = () => {
     isPending: isEvmSendPending,
     error: evmSendError,
   } = useWriteContract();
+
   // Hook for approving token spending
   const {
     writeContractAsync: approveAsync,
@@ -103,23 +110,19 @@ const BridgeForm: React.FC = () => {
   // === Solana Hooks ===
   const solanaWallet = useSolanaWallet();
   const { connection: solanaConnection } = useSolanaConnection();
-
   const {
     connected: solanaConnected,
     publicKey: solanaPublicKey,
     signTransaction,
-    sendTransaction,
   } = solanaWallet;
 
   // === Umi Setup for Solana SDK ===
   const umi = useMemo(() => {
     if (!solanaConnection) return null;
-    // Use umi-bundle-defaults and adapt RPC endpoint
     const umiInstance = createUmi(solanaConnection.rpcEndpoint).use(
       mplToolbox()
-    ); // Add metaplex toolbox plugin
+    );
     if (solanaWallet && solanaWallet.publicKey) {
-      // Use wallet adapter identity only if wallet is connected
       umiInstance.use(walletAdapterIdentity(solanaWallet));
     }
     return umiInstance;
@@ -188,7 +191,7 @@ const BridgeForm: React.FC = () => {
       const formattedBalance = parseFloat(
         formatUnits(balance as any, decimals as any)
       );
-      setEthBalance(formattedBalance); // Set balance in MOFT tokens
+      setEthBalance(formattedBalance);
     }
   }, [balance, decimals]);
 
@@ -210,7 +213,7 @@ const BridgeForm: React.FC = () => {
       const associatedTokenAddress = getAssociatedTokenAddressSync(
         tokenMintAddress,
         solanaPublicKey,
-        false, // allowOwnerOffCurve - typically false for user wallets
+        false,
         TOKEN_PROGRAM_ID
       );
 
@@ -220,9 +223,9 @@ const BridgeForm: React.FC = () => {
       if (tokenAccountInfo.value) {
         const tokenAmount = (tokenAccountInfo.value.data as any).parsed.info
           .tokenAmount;
-        setSolBalance(parseFloat(tokenAmount.uiAmountString || "0")); // Set balance in MOFT tokens
+        setSolBalance(parseFloat(tokenAmount.uiAmountString || "0"));
       } else {
-        setSolBalance(0); // No associated token account found, balance is 0
+        setSolBalance(0);
       }
     } catch (error) {
       console.error("Error fetching MOFT token balance on Solana:", error);
@@ -241,14 +244,12 @@ const BridgeForm: React.FC = () => {
       setFeedbackStatus("error");
       return;
     }
-
     const numericAmount = parseFloat(amount);
     if (isNaN(numericAmount) || numericAmount <= 0) {
       setFeedback("Error: Invalid amount.");
       setFeedbackStatus("error");
       return;
     }
-
     setIsQuotingFee(true);
 
     try {
@@ -263,8 +264,6 @@ const BridgeForm: React.FC = () => {
         const amountWei = parseUnits(amount, MOFT_TOKEN_DECIMALS_EVM);
         let toBytes32: Hex;
         try {
-          // Assuming recipient is a Solana address (bs58 encoded)
-          // Inside handleQuoteFee (EVM part)
           const decodedAddress = bs58.decode(recipientAddress);
           const hexAddress = bytesToHex(decodedAddress); // Convert Uint8Array to Hex
           toBytes32 = pad(hexAddress, { size: 32 }); // Now pad the Hex string
@@ -274,40 +273,26 @@ const BridgeForm: React.FC = () => {
           setIsQuotingFee(false);
           return;
         }
-
         const sendParam = {
           dstEid: SOLANA_ENDPOINT_ID,
           to: toBytes32,
           amountLD: amountWei,
-          minAmountLD: (amountWei * 99n) / 100n, // Example: 99% slippage tolerance
-          extraOptions: "0x", // Default options
+          minAmountLD: (amountWei * 99n) / 100n,
+          extraOptions: "0x",
           composeMsg: "0x",
           oftCmd: "0x",
         };
 
-        // Use wagmi's useReadContract
-        // Note: `useReadContract` is a hook, call it at the top level or use `readContract` from wagmi/actions
-        // For simplicity in a handler, we might use wagmi/actions `readContract` if available,
-        // or structure this differently using useEffect with dependencies.
-        // Let's simulate using readContract directly (you'd import it from wagmi/actions or core)
-        // This requires wagmi config setup outside the component.
-        // Alternative: Use useSimulateContract which gives fee estimate AND checks execution
-        const { data: quoteResult } = await simulateEVMQuoteSend(sendParam); // See helper function below
-
+        const { data: quoteResult } = await simulateEVMQuoteSend(sendParam);
         if (!quoteResult) {
           throw new Error("Could not simulate quoteSend");
         }
 
-        const fee = quoteResult as MessagingFee; // Adjust based on actual return type
+        const fee = quoteResult as MessagingFee;
         setQuotedFee(fee);
-        // setFeedback(`Estimated Fee: ${formatUnits(fee.nativeFee, 18)} ETH`); // Assuming native fee is in ETH (18 decimals)
-      }
-      // --- Solana Fee Quote ---
-      else if (sourceChain === "solana") {
-        // await BridgeTokensFromSolanaToEvm();
-        // return;
+      } else if (sourceChain === "solana") {
         const connection = new Connection("https://api.devnet.solana.com");
-        console.log(await connection.getVersion()); // Quick check to see if the connection works
+        console.log(await connection.getVersion());
 
         if (
           !solanaConnected ||
@@ -323,8 +308,7 @@ const BridgeForm: React.FC = () => {
         const amountBaseUnits = parseUnits(amount, MOFT_TOKEN_DECIMALS_SOLANA);
         let recipientBytes32: Uint8Array;
         try {
-          // Assuming recipient is an EVM address (hex)
-          recipientBytes32 = addressToBytes32(recipientAddress); // Use LZ utility
+          recipientBytes32 = addressToBytes32(recipientAddress);
         } catch (e) {
           setFeedback("Error: Invalid EVM recipient address format.");
           setFeedbackStatus("error");
@@ -334,12 +318,10 @@ const BridgeForm: React.FC = () => {
 
         console.log("Quoting Solana -> EVM Fee:");
         console.log("Destination EID used:", EVM_ENDPOINT_ID);
-        console.log("Expected Destination EID:", EndpointId.SEPOLIA_V2_TESTNET); // Verify the imported value
-        console.log("Expected Destination EID:", EndpointId.SEPOLIA_TESTNET); // Verify the imported value
+        console.log("Expected Destination EID:", EndpointId.SEPOLIA_V2_TESTNET);
+        console.log("Expected Destination EID:", EndpointId.SEPOLIA_TESTNET);
         console.log("OFT Program ID used:", SOLANA_OFT_PROGRAM_ID);
-
-        console.log("Using Solana RPC:", solanaConnection.rpcEndpoint); // Add before the oft.quote call
-
+        console.log("Using Solana RPC:", solanaConnection.rpcEndpoint);
         console.log("--- Debugging Connection ---");
         console.log("solanaConnection object:", solanaConnection);
         console.log(
@@ -351,17 +333,16 @@ const BridgeForm: React.FC = () => {
         console.log("Payer Pubkey:", umi?.identity?.publicKey?.toString());
         console.log("--- End Debugging Connection ---");
 
-        // Check explicitly if connection or rpc seems invalid before calling
         if (!solanaConnection || !umi?.rpc) {
           setFeedback("Error: Solana connection or Umi RPC is not ready.");
           setFeedbackStatus("error");
           setIsQuotingFee(false);
-          return; // Prevent calling oft.quote if objects are missing
+          return;
         }
 
         console.log(
           "console in the App......",
-          umi.rpc as any, // Cast to any for compatibility
+          umi.rpc as any,
           {
             payer: umi.identity.publicKey as any,
             tokenMint: publicKey(SOLANA_MOFT_MINT_ADDRESS) as any,
@@ -369,18 +350,18 @@ const BridgeForm: React.FC = () => {
           },
           {
             payInLzToken: false,
-            to: Buffer.from(recipientBytes32), // SDK expects Buffer
+            to: Buffer.from(recipientBytes32),
             dstEid: EVM_ENDPOINT_ID,
             amountLd: amountBaseUnits,
-            minAmountLd: 1n, // 99% slippage
-            options: Buffer.from(""), // Default options
+            minAmountLd: 1n,
+            options: Buffer.from(""),
             composeMsg: undefined,
           },
           { oft: publicKey(SOLANA_OFT_PROGRAM_ID) as any }
         );
 
         const { nativeFee } = await oft.quote(
-          umi.rpc as any, // Cast to any for compatibility
+          umi.rpc as any,
           {
             payer: umi.identity.publicKey as any,
             tokenMint: publicKey(SOLANA_MOFT_MINT_ADDRESS) as any,
@@ -388,23 +369,19 @@ const BridgeForm: React.FC = () => {
           },
           {
             payInLzToken: false,
-            to: Buffer.from(recipientBytes32), // SDK expects Buffer
+            to: Buffer.from(recipientBytes32),
             dstEid: EVM_ENDPOINT_ID,
             amountLd: amountBaseUnits,
-            // minAmountLd: (amountBaseUnits * 99n) / 100n, // 99% slippage
-            minAmountLd: 1n, // 99% slippage
-            options: Buffer.from(""), // Default options
+            minAmountLd: 1n,
+            options: Buffer.from(""),
             composeMsg: undefined,
           },
           { oft: publicKey(SOLANA_OFT_PROGRAM_ID) as any }
         );
 
         // Note: Solana nativeFee from SDK might be in SOL lamports (need confirmation)
-        const fee = { nativeFee, lzTokenFee: 0n }; // Assuming lzTokenFee is 0 if payInLzToken is false
+        const fee = { nativeFee, lzTokenFee: 0n };
         setQuotedFee(fee);
-        // Format assuming fee is in Lamports (9 decimals for SOL)
-        // setFeedback(`Estimated Fee: ${formatUnits(nativeFee, 9)} SOL`);
-        // setFeedbackStatus('info');
       }
     } catch (error: any) {
       console.error("Fee Quoting Error:", error);
@@ -458,7 +435,7 @@ const BridgeForm: React.FC = () => {
     setLzScanLink("");
     setIsBridging(true);
 
-    const numericAmount = parseFloat(amount); // Should be validated already
+    const numericAmount = parseFloat(amount);
 
     try {
       // --- EVM Bridge Send ---
@@ -478,8 +455,8 @@ const BridgeForm: React.FC = () => {
 
         // Inside handleBridge (EVM part)
         const decodedAddressBridge = bs58.decode(recipientAddress);
-        const hexAddressBridge = bytesToHex(decodedAddressBridge); // Convert Uint8Array to Hex
-        const toBytes32Bridge = pad(hexAddressBridge, { size: 32 }); // Now pad the Hex string
+        const hexAddressBridge = bytesToHex(decodedAddressBridge);
+        const toBytes32Bridge = pad(hexAddressBridge, { size: 32 });
 
         // 1. Approve OFT Contract to spend tokens (if necessary)
         // You might want to check allowance first
@@ -487,10 +464,10 @@ const BridgeForm: React.FC = () => {
         setFeedbackStatus("info");
         try {
           const approveHash = await approveAsync({
-            address: EVM_OFT_CONTRACT_ADDRESS as Address, // Assuming OFT is also the ERC20
+            address: EVM_OFT_CONTRACT_ADDRESS as Address,
             abi: EVM_OFT_ABI,
             functionName: "approve",
-            args: [EVM_OFT_CONTRACT_ADDRESS as Address, amountWei], // Approve OFT contract itself
+            args: [EVM_OFT_CONTRACT_ADDRESS as Address, amountWei],
             chainId: EVM_CHAIN_ID,
           });
           // Optional: Wait for approval confirmation
@@ -524,10 +501,9 @@ const BridgeForm: React.FC = () => {
           address: EVM_OFT_CONTRACT_ADDRESS as Address,
           abi: EVM_OFT_ABI,
           functionName: "send",
-          args: [sendParam, quotedFee, evmAddress as Address], // Pass SendParam, Fee, Refund Address
-          value: quotedFee.nativeFee, // Pay the native fee
+          args: [sendParam, quotedFee, evmAddress as Address],
+          value: quotedFee.nativeFee,
           chainId: EVM_CHAIN_ID,
-          // gasLimit might be needed, estimate or set fixed
         });
 
         setFeedback("Bridge transaction sent. Waiting for confirmation...");
@@ -535,7 +511,7 @@ const BridgeForm: React.FC = () => {
         setBridgeTxHash(txHash);
 
         // Note: LayerZero Scan link typically uses the *source* tx hash
-        setLzScanLink(getLayerZeroScanLink(txHash, true)); // true for testnet
+        setLzScanLink(getLayerZeroScanLink(txHash, true));
       }
       // --- Solana Bridge Send ---
       else if (sourceChain === "solana") {
@@ -559,17 +535,15 @@ const BridgeForm: React.FC = () => {
         const sourceTokenAccount = getAssociatedTokenAddressSync(
           new Web3PublicKey(SOLANA_MOFT_MINT_ADDRESS),
           solanaPublicKey,
-          false, // allowOwnerOffCurve - typically false for user wallets
-          TOKEN_PROGRAM_ID // SPL Token Program ID
+          false,
+          TOKEN_PROGRAM_ID
         );
-
         console.log("🚀 ~ handleBridge ~ amountBaseUnits:", amountBaseUnits);
 
         const ix = await oft.send(
-          umi.rpc as any, // Cast to any for compatibility
+          umi.rpc as any,
           {
-            // Ensure identity is the wallet signer
-            payer: umi.identity as any, // Should be walletAdapterIdentity
+            payer: umi.identity as any,
             tokenMint: publicKey(SOLANA_MOFT_MINT_ADDRESS) as any,
             tokenEscrow: publicKey(SOLANA_OFT_ESCROW_ADDRESS) as any,
             tokenSource: publicKey(sourceTokenAccount.toBase58()) as any, // User's ATA
@@ -589,12 +563,6 @@ const BridgeForm: React.FC = () => {
           }
         );
 
-        // Build Transaction (using web3.js as SDK might require full Umi tx builder setup)
-        // Convert Umi instruction to web3.js format if possible, or reconstruct manually
-        // The oft.send above likely returns Umi instruction format.
-        // For simplicity, let's assume ix is compatible or can be adapted.
-        // This part is complex and might require deeper SDK knowledge or manual instruction creation.
-
         // Placeholder: Assuming ix is a structure we can adapt
         // A real implementation needs careful conversion from Umi Ix to Web3js Ix
         const transaction = new Transaction();
@@ -604,10 +572,10 @@ const BridgeForm: React.FC = () => {
         // Fetch priority fees and set compute unit price/limit
         const computePriceIx = ComputeBudgetProgram.setComputeUnitPrice({
           microLamports: 10000,
-        }); // Example price, fetch dynamically
+        });
         const computeLimitIx = ComputeBudgetProgram.setComputeUnitLimit({
           units: 400000,
-        }); // Example limit, estimate based on tx
+        });
         transaction.add(computePriceIx);
         transaction.add(computeLimitIx);
 

@@ -2,6 +2,8 @@ import React from "react";
 import Image from "next/image";
 import dynamic from "next/dynamic";
 
+import styles from "../styles/page.module.scss";
+
 import Loading from "./Loading";
 
 const SolanaConnectButton = dynamic(
@@ -20,24 +22,17 @@ const EvmConnectButton = dynamic(() => import("./EvmConnectWalletButton"), {
 const Navbar = () => {
   return (
     <nav>
-      <div
-        style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          padding: "20px",
-        }}
-      >
-        <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+      <div className={styles.navbar}>
+        <div className={styles.navbarLogo}>
           <Image
             src={require("../assets/bridge.png")}
             alt="bridge logo"
             width={40}
             height={40}
           />
-          <p style={{ fontSize: 22, fontWeight: "600" }}>Aasan Bridge</p>
+          <p>Aasan Bridge</p>
         </div>
-        <div style={{ display: "flex", gap: "10px" }}>
+        <div className={styles.navbarButtons}>
           <SolanaConnectButton />
           <EvmConnectButton />
         </div>
