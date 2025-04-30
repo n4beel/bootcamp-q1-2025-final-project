@@ -9,6 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@civic/auth": "^0.5.1",
     "@layerzerolabs/lz-definitions": "^3.0.88",
     "@layerzerolabs/lz-v2-utilities": "^3.0.88",
     "@layerzerolabs/oft-v2-solana-sdk": "^3.0.88",

@@ -26,7 +26,7 @@ const Navbar = () => {
 
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                    <SolanaConnectButton />
+                    {/* <SolanaConnectButton /> */}
                     <EvmConnectButton />
                 </div>
             </div>
