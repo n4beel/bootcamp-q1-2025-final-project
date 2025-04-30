@@ -47,6 +47,8 @@ const BridgeUI = ({
                         {sourceChain === 'evm' ? 'Solana Devnet' : 'Sepolia Testnet'}
                     </div>
                     <div className="switch" onClick={() => {
+                        console.log("future feature");
+                        return;
                         setSourceChain(sourceChain === 'evm' ? 'solana' : 'evm')
                     }}>&gt;</div>
                 </div>
